@@ -116,9 +116,27 @@
             font-size: 54px;
             font-weight: bold;
             text-align: center;
-            margin: 20px 0;
+            margin: 15px 0;
             font-family: monospace;
             letter-spacing: 2px;
+        }
+
+        .custom-time-input {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .custom-time-input input {
+            width: 70px;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            text-align: center;
         }
 
         .btn-group {
@@ -233,10 +251,17 @@
     <div id="quote-container">Loading motivational spark...</div>
 
     <main class="dashboard-grid">
-        <!-- Pomodoro Timer -->
         <section class="card">
-            <h2>⏱️ Pomodoro Timer <span id="timer-status" style="font-size: 12px; color: var(--accent-color);">[Work Session]</span></h2>
+            <h2>⏱️ Pomodoro Timer <span id="timer-status" style="font-size: 12px; color: var(--accent-color);">[Session]</span></h2>
+            
+            <div class="custom-time-input">
+                <label for="minutesInput">Mins:</label>
+                <input type="number" id="minutesInput" value="25" min="1" max="180">
+                <button id="setTimeBtn" class="secondary" style="padding: 6px 12px; font-size: 13px;">Set Time</button>
+            </div>
+
             <div class="timer-display" id="timer">25:00</div>
+            
             <div class="btn-group">
                 <button id="startBtn">Start</button>
                 <button id="pauseBtn" class="secondary">Pause</button>
@@ -244,22 +269,20 @@
             </div>
         </section>
 
-        <!-- Ambient Soundboard -->
         <section class="card">
             <h2>🎵 Ambient Soundboard</h2>
             <div class="sound-controls">
                 <div class="sound-row">
-                    <span>🌧️ Rain Ambient</span>
+                    <span>🌧️ Pure Rain (White Noise)</span>
                     <input type="range" id="rainVol" min="0" max="1" step="0.1" value="0">
                 </div>
                 <div class="sound-row">
-                    <span>🔥 Campfire</span>
+                    <span>🔥 Cozy Fire (Brown Noise)</span>
                     <input type="range" id="fireVol" min="0" max="1" step="0.1" value="0">
                 </div>
             </div>
         </section>
 
-        <!-- Tasks Management -->
         <section class="card">
             <h2>📝 Focus Tasks</h2>
             <div class="todo-input-group">
@@ -269,10 +292,6 @@
             <ul class="todo-list" id="todoList"></ul>
         </section>
     </main>
-
-    <!-- Audio Elements (Using open-source royalty-free sound loops) -->
-    <audio id="rainAudio" loop src="https://assets.mixkit.co/active_storage/sfx/2433/2433-84.wav"></audio>
-    <audio id="fireAudio" loop src="https://assets.mixkit.co/active_storage/sfx/2438/2438-84.wav"></audio>
 
     <script>
         // Theme Toggle Logic
@@ -285,7 +304,7 @@
             }
         });
 
-        // Tab Blur Detection (Unique Feature)
+        // Tab Blur Detection
         let originalTitle = document.title;
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -306,21 +325,33 @@
             }
         }
         fetchQuote();
-        setInterval(fetchQuote, 60000); // Fetch naya quote every 60 seconds
+        setInterval(fetchQuote, 60000);
 
-        // Pomodoro Timer Logic
+        // Pomodoro Timer Logic (With Custom Input)
         let timer;
-        let timeLeft = 25 * 60;
         let isRunning = false;
-        let isWorkSession = true;
+        let defaultMinutes = 25;
+        let timeLeft = defaultMinutes * 60;
+        
         const timerDisplay = document.getElementById('timer');
-        const statusDisplay = document.getElementById('timer-status');
+        const minutesInput = document.getElementById('minutesInput');
+        const setTimeBtn = document.getElementById('setTimeBtn');
 
         function updateDisplay() {
             const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
             const secs = (timeLeft % 60).toString().padStart(2, '0');
             timerDisplay.innerText = `${mins}:${secs}`;
         }
+
+        setTimeBtn.addEventListener('click', () => {
+            let newMins = parseInt(minutesInput.value);
+            if (isNaN(newMins) || newMins < 1) newMins = 25;
+            defaultMinutes = newMins;
+            clearInterval(timer);
+            isRunning = false;
+            timeLeft = defaultMinutes * 60;
+            updateDisplay();
+        });
 
         document.getElementById('startBtn').addEventListener('click', () => {
             if (!isRunning) {
@@ -332,10 +363,8 @@
                     } else {
                         clearInterval(timer);
                         isRunning = false;
-                        isWorkSession = !isWorkSession;
-                        timeLeft = isWorkSession ? 25 * 60 : 5 * 60;
-                        statusDisplay.innerText = isWorkSession ? "[Work Session]" : "[Break Time]";
-                        alert(isWorkSession ? "Work Session Shuru!" : "Break Time Shuru!");
+                        alert("Time's up! Take a well-deserved break.");
+                        timeLeft = defaultMinutes * 60;
                         updateDisplay();
                     }
                 }, 1000);
@@ -350,29 +379,74 @@
         document.getElementById('resetBtn').addEventListener('click', () => {
             clearInterval(timer);
             isRunning = false;
-            isWorkSession = true;
-            timeLeft = 25 * 60;
-            statusDisplay.innerText = "[Work Session]";
+            timeLeft = defaultMinutes * 60;
             updateDisplay();
         });
 
-        // Audio Soundboard Logic
-        const rainAudio = document.getElementById('rainAudio');
-        const fireAudio = document.getElementById('fireAudio');
+        // --- WEB AUDIO API FOR SOUNDBOARD (Fixes Audio Loading Issues) ---
+        let audioCtx;
+        let rainGain, fireGain;
+        let rainNode, fireNode;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Setup Gain Nodes (Volume Controls)
+                rainGain = audioCtx.createGain();
+                fireGain = audioCtx.createGain();
+                rainGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                fireGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                
+                rainGain.connect(audioCtx.destination);
+                fireGain.connect(audioCtx.destination);
+
+                // Start Synth Noise Loops
+                rainNode = createNoiseNode('white', rainGain);
+                fireNode = createNoiseNode('brown', fireGain);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function createNoiseNode(type, gainNode) {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            let lastOut = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                let white = Math.random() * 2 - 1;
+                if (type === 'white') {
+                    output[i] = white * 0.15; // Soft rain-like sizzle
+                } else if (type === 'brown') {
+                    // Brown noise filter for rumble/campfire effect
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 1.5; 
+                }
+            }
+            
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+            noise.connect(gainNode);
+            noise.start();
+            return noise;
+        }
 
         document.getElementById('rainVol').addEventListener('input', (e) => {
-            rainAudio.volume = e.target.value;
-            if (e.target.value > 0 && rainAudio.paused) rainAudio.play();
-            if (e.target.value == 0) rainAudio.pause();
+            initAudio();
+            rainGain.gain.linearRampToValueAtTime(e.target.value, audioCtx.currentTime + 0.1);
         });
 
         document.getElementById('fireVol').addEventListener('input', (e) => {
-            fireAudio.volume = e.target.value;
-            if (e.target.value > 0 && fireAudio.paused) fireAudio.play();
-            if (e.target.value == 0) fireAudio.pause();
+            initAudio();
+            fireGain.gain.linearRampToValueAtTime(e.target.value, audioCtx.currentTime + 0.1);
         });
 
-        // To-Do List Logic with LocalStorage
+        // To-Do List Logic
         const todoInput = document.getElementById('todoInput');
         const todoList = document.getElementById('todoList');
         let tasks = JSON.parse(localStorage.getItem('focus_tasks')) || [];
