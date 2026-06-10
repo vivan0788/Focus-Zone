@@ -1,0 +1,12 @@
+{
+  "name": "focus-zone-dashboard",
+  "version": "1.0.0",
+  "description": "A unique focus zone dashboard deployable on Vercel",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
