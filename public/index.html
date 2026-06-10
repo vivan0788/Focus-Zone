@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Zone Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --container-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --border-color: #334155;
+            --success-color: #4ade80;
+        }
+
+        [data-theme="pastel"] {
+            --bg-color: #f5f5f5;
+            --container-bg: #ffffff;
+            --text-color: #333333;
+            --accent-color: #ff7675;
+            --accent-hover: #d63031;
+            --border-color: #e0e0e0;
+            --success-color: #2ecc71;
+        }
+
+        [data-theme="cyberpunk"] {
+            --bg-color: #000000;
+            --container-bg: #111111;
+            --text-color: #00ff00;
+            --accent-color: #ff00ff;
+            --accent-hover: #cc00cc;
+            --border-color: #00ff00;
+            --success-color: #00ffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .theme-select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            outline: none;
+        }
+
+        #quote-container {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+            font-style: italic;
+            color: var(--accent-color);
+            font-size: 16px;
+            min-height: 24px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Timer Styles */
+        .timer-display {
+            font-size: 54px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: var(--accent-color);
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        [data-theme="cyberpunk"] button {
+            color: black;
+            font-weight: bold;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        /* Soundboard Styles */
+        .sound-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .sound-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.05);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .sound-row input[type="range"] {
+            flex: 1;
+            margin: 0 15px;
+            accent-color: var(--accent-color);
+        }
+
+        /* Todo Styles */
+        .todo-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .todo-input-group input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .todo-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .todo-item.completed span {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        .delete-btn {
+            background-color: #ef4444;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎯 Focus Zone Dashboard</h1>
+        <select id="themeSelect" class="theme-select">
+            <option value="default">Midnight Dark</option>
+            <option value="pastel">Warm Pastel</option>
+            <option value="cyberpunk">Cyberpunk Neon</option>
+        </select>
+    </header>
+
+    <div id="quote-container">Loading motivational spark...</div>
+
+    <main class="dashboard-grid">
+        <!-- Pomodoro Timer -->
+        <section class="card">
+            <h2>⏱️ Pomodoro Timer <span id="timer-status" style="font-size: 12px; color: var(--accent-color);">[Work Session]</span></h2>
+            <div class="timer-display" id="timer">25:00</div>
+            <div class="btn-group">
+                <button id="startBtn">Start</button>
+                <button id="pauseBtn" class="secondary">Pause</button>
+                <button id="resetBtn" class="secondary">Reset</button>
+            </div>
+        </section>
+
+        <!-- Ambient Soundboard -->
+        <section class="card">
+            <h2>🎵 Ambient Soundboard</h2>
+            <div class="sound-controls">
+                <div class="sound-row">
+                    <span>🌧️ Rain Ambient</span>
+                    <input type="range" id="rainVol" min="0" max="1" step="0.1" value="0">
+                </div>
+                <div class="sound-row">
+                    <span>🔥 Campfire</span>
+                    <input type="range" id="fireVol" min="0" max="1" step="0.1" value="0">
+                </div>
+            </div>
+        </section>
+
+        <!-- Tasks Management -->
+        <section class="card">
+            <h2>📝 Focus Tasks</h2>
+            <div class="todo-input-group">
+                <input type="text" id="todoInput" placeholder="Add a vital task...">
+                <button id="addTodoBtn">Add</button>
+            </div>
+            <ul class="todo-list" id="todoList"></ul>
+        </section>
+    </main>
+
+    <!-- Audio Elements (Using open-source royalty-free sound loops) -->
+    <audio id="rainAudio" loop src="https://assets.mixkit.co/active_storage/sfx/2433/2433-84.wav"></audio>
+    <audio id="fireAudio" loop src="https://assets.mixkit.co/active_storage/sfx/2438/2438-84.wav"></audio>
+
+    <script>
+        // Theme Toggle Logic
+        const themeSelect = document.getElementById('themeSelect');
+        themeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'default') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', e.target.value);
+            }
+        });
+
+        // Tab Blur Detection (Unique Feature)
+        let originalTitle = document.title;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                document.title = "⚠️ Wapas aao, focus karo!";
+            } else {
+                document.title = originalTitle;
+            }
+        });
+
+        // Backend Quote Integration
+        async function fetchQuote() {
+            try {
+                const res = await fetch('/api/quote');
+                const data = await res.json();
+                document.getElementById('quote-container').innerText = `"${data.quote}"`;
+            } catch (err) {
+                document.getElementById('quote-container').innerText = "“Focus on being productive instead of busy.”";
+            }
+        }
+        fetchQuote();
+        setInterval(fetchQuote, 60000); // Fetch naya quote every 60 seconds
+
+        // Pomodoro Timer Logic
+        let timer;
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        let isWorkSession = true;
+        const timerDisplay = document.getElementById('timer');
+        const statusDisplay = document.getElementById('timer-status');
+
+        function updateDisplay() {
+            const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const secs = (timeLeft % 60).toString().padStart(2, '0');
+            timerDisplay.innerText = `${mins}:${secs}`;
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (!isRunning) {
+                isRunning = true;
+                timer = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                    } else {
+                        clearInterval(timer);
+                        isRunning = false;
+                        isWorkSession = !isWorkSession;
+                        timeLeft = isWorkSession ? 25 * 60 : 5 * 60;
+                        statusDisplay.innerText = isWorkSession ? "[Work Session]" : "[Break Time]";
+                        alert(isWorkSession ? "Work Session Shuru!" : "Break Time Shuru!");
+                        updateDisplay();
+                    }
+                }, 1000);
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            clearInterval(timer);
+            isRunning = false;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            clearInterval(timer);
+            isRunning = false;
+            isWorkSession = true;
+            timeLeft = 25 * 60;
+            statusDisplay.innerText = "[Work Session]";
+            updateDisplay();
+        });
+
+        // Audio Soundboard Logic
+        const rainAudio = document.getElementById('rainAudio');
+        const fireAudio = document.getElementById('fireAudio');
+
+        document.getElementById('rainVol').addEventListener('input', (e) => {
+            rainAudio.volume = e.target.value;
+            if (e.target.value > 0 && rainAudio.paused) rainAudio.play();
+            if (e.target.value == 0) rainAudio.pause();
+        });
+
+        document.getElementById('fireVol').addEventListener('input', (e) => {
+            fireAudio.volume = e.target.value;
+            if (e.target.value > 0 && fireAudio.paused) fireAudio.play();
+            if (e.target.value == 0) fireAudio.pause();
+        });
+
+        // To-Do List Logic with LocalStorage
+        const todoInput = document.getElementById('todoInput');
+        const todoList = document.getElementById('todoList');
+        let tasks = JSON.parse(localStorage.getItem('focus_tasks')) || [];
+
+        function renderTasks() {
+            todoList.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = `todo-item ${task.completed ? 'completed' : ''}`;
+                li.innerHTML = `
+                    <span onclick="toggleTask(${index})" style="cursor:pointer;">${task.text}</span>
+                    <button class="delete-btn" onclick="deleteTask(${index})">X</button>
+                `;
+                todoList.appendChild(li);
+            });
+            localStorage.setItem('focus_tasks', JSON.stringify(tasks));
+        }
+
+        document.getElementById('addTodoBtn').addEventListener('click', () => {
+            if (todoInput.value.trim() !== '') {
+                tasks.push({ text: todoInput.value.trim(), completed: false });
+                todoInput.value = '';
+                renderTasks();
+            }
+        });
+
+        window.toggleTask = (index) => {
+            tasks[index].completed = !tasks[index].completed;
+            renderTasks();
+        };
+
+        window.deleteTask = (index) => {
+            tasks.splice(index, 1);
+            renderTasks();
+        };
+
+        renderTasks();
+    </script>
+</body>
+</html>
